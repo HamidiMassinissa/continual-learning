@@ -5,10 +5,11 @@ from torch.utils.data import ConcatDataset
 import numpy as np
 import tqdm
 import copy
-from utils import get_data_loader,checkattr
+from utils import get_data_loader,checkattr, save_checkpoint
 from data.manipulate import SubDataset, MemorySetDataset
 from models.cl.continual_learner import ContinualLearner
 
+from params.param_stamp import get_param_stamp
 
 def train_cl(model, train_datasets, iters=2000, batch_size=32, baseline='none',
              loss_cbs=list(), eval_cbs=list(), sample_cbs=list(), context_cbs=list(),
@@ -24,6 +25,8 @@ def train_cl(model, train_datasets, iters=2000, batch_size=32, baseline='none',
     [generator]           None or <nn.Module>, if separate generative model is trained (for [gen_iters] per context)
     [*_cbs]               <list> of call-back functions to evaluate training-progress
     '''
+
+    print('start of train_cl()')
 
     # Set model in training-mode
     model.train()
@@ -419,6 +422,24 @@ def train_cl(model, train_datasets, iters=2000, batch_size=32, baseline='none',
                             lambda y, x=model.classes_per_context: y % x
                         )
                         previous_datasets = [MemorySetDataset(model.memory_sets, target_transform=target_transform)]
+    
+        '''
+        MH: saving the model after each task (context)
+        '''
+        print('end of train_cl()')
+        print('saving the model after training on context ', context)
+        args = kwargs['args']
+        param_stamp = get_param_stamp(
+            args, model.name,
+            replay_model_name=None,  #generator.name if train_gen else None,
+            feature_extractor_name=None,  # feature_extractor.name if (feature_extractor is not None) else None,
+            verbose=True,  #verbose,
+        )
+        save_name = "mM-{}-context-{}".format(param_stamp, context) if (
+                not hasattr(args, 'full_stag') or args.full_stag == "none"
+        ) else "{}-{}".format(model.name, args.full_stag)
+        save_checkpoint(model, model_dir=args.m_dir, name=save_name, verbose=True)
+        
 
 #------------------------------------------------------------------------------------------------------------#
 
@@ -555,6 +576,7 @@ def train_fromp(model, train_datasets, iters=2000, batch_size=32,
         for context_cb in context_cbs:
             if context_cb is not None:
                 context_cb(model, iters, context=context)
+
 
 #------------------------------------------------------------------------------------------------------------#
 
