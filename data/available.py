@@ -48,6 +48,8 @@ AVAILABLE_TRANSFORMS = {
 DATASET_CONFIGS = {
     'MNIST': {'size': 28, 'channels': 1, 'classes': 10},
     'MNIST32': {'size': 32, 'channels': 1, 'classes': 10},
+    'RotatedMNIST': {'size': 28, 'channels': 1, 'classes': 10},
+    'dSprites': {'size': 64, 'channels': 1, 'classes': 3},
     'CIFAR10': {'size': 32, 'channels': 3, 'classes': 10},
     'CIFAR100': {'size': 32, 'channels': 3, 'classes': 100},
 }

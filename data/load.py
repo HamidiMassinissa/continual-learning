@@ -5,6 +5,9 @@ from torch.utils.data import ConcatDataset
 from data.manipulate import permutate_image_pixels, SubDataset, TransformedDataset
 from data.available import AVAILABLE_DATASETS, AVAILABLE_TRANSFORMS, DATASET_CONFIGS
 
+from data.rotated_mnist import tasks_rotMNIST_datasets
+from data.rotated_dsprites import tasks_rotdSprites_datasets
+
 
 def get_dataset(name, type='train', download=True, capacity=None, permutation=None, dir='./store/datasets',
                 verbose=False, augment=False, normalize=False, target_transform=None):
@@ -71,6 +74,10 @@ def get_context_set(name, scenario, contexts, data_dir="./datasets", only_config
         data_type = 'MNIST32'
         if train_set_per_class:
             raise NotImplementedError('Permuted MNIST currently has no support for separate training dataset per class')
+    elif name == "RotatedMNIST":
+        data_type = 'RotatedMNIST'
+    elif name == "dSprites":
+        data_type = 'dSprites'
     elif name == "CIFAR10":
         data_type = 'CIFAR10'
     elif name == "CIFAR100":
@@ -84,10 +91,12 @@ def get_context_set(name, scenario, contexts, data_dir="./datasets", only_config
     if config['normalize']:
         config['denormalize'] = AVAILABLE_TRANSFORMS["CIFAR100_denorm"]
     # check for number of contexts
-    if contexts > config['classes'] and not name=="permMNIST":
+    if contexts > config['classes'] and not (name=="permMNIST" or name=="RotatedMNIST" or name=="dSprites"):
         raise ValueError("Experiment '{}' cannot have more than {} contexts!".format(name, config['classes']))
     # -how many classes per context?
-    classes_per_context = 10 if name=="permMNIST" else int(np.floor(config['classes'] / contexts))
+    classes_per_context = 10 if name=="permMNIST" or name=="RotatedMNIST" else int(np.floor(config['classes'] / contexts))
+    if name=="dSprites":
+        classes_per_context = 3 
     config['classes_per_context'] = classes_per_context
     config['output_units'] = classes_per_context if (scenario=='domain' or
                                                     (scenario=="task" and singlehead)) else classes_per_context*contexts
@@ -120,6 +129,15 @@ def get_context_set(name, scenario, contexts, data_dir="./datasets", only_config
                 testset, transform=transforms.Lambda(lambda x, p=perm: permutate_image_pixels(x, p)),
                 target_transform=target_transform
             ))
+            
+    elif name == 'RotatedMNIST':
+        num_tasks = 8
+        train_datasets, test_datasets = tasks_rotMNIST_datasets(num_tasks=num_tasks, per_task_rotation=45)
+
+    elif name == 'dSprites':
+        num_tasks = 8
+        train_datasets, test_datasets = tasks_rotdSprites_datasets(num_tasks=num_tasks, per_task_rotation=45)
+
     else:
         # prepare permutation to shuffle label-ids (to create different class batches for each random seed)
         classes = config['classes']
@@ -152,4 +170,5 @@ def get_context_set(name, scenario, contexts, data_dir="./datasets", only_config
             test_datasets.append(SubDataset(testset, labels, target_transform=target_transform))
 
     # Return tuple of train- and test-dataset, config-dictionary and number of classes per context
+    print(config)
     return ((train_datasets, test_datasets), config)
