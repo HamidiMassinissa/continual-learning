@@ -576,6 +576,23 @@ def train_fromp(model, train_datasets, iters=2000, batch_size=32,
         for context_cb in context_cbs:
             if context_cb is not None:
                 context_cb(model, iters, context=context)
+    
+        '''
+        MH: saving the model after each task (context)
+        '''
+        print('end of train_cl()')
+        print('saving the model after training on context ', context)
+        args = kwargs['args']
+        param_stamp = get_param_stamp(
+            args, model.name,
+            replay_model_name=None,  #generator.name if train_gen else None,
+            feature_extractor_name=None,  # feature_extractor.name if (feature_extractor is not None) else None,
+            verbose=True,  #verbose,
+        )
+        save_name = "mM-{}-context-{}".format(param_stamp, context) if (
+                not hasattr(args, 'full_stag') or args.full_stag == "none"
+        ) else "{}-{}".format(model.name, args.full_stag)
+        save_checkpoint(model, model_dir=args.m_dir, name=save_name, verbose=True)
 
 
 #------------------------------------------------------------------------------------------------------------#
@@ -655,3 +672,5 @@ def train_gen_classifier(model, train_datasets, iters=2000, epochs=None, batch_s
             # Updated counts
             classes_in_current_context = 0
             context += 1
+
+        
